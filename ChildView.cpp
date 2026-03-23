@@ -8,6 +8,7 @@
 
 #include "graphics/GrObject.h"
 #include "graphics/GrTransform.h"
+#include "graphics/GrTexture.h"
 #include "graphics/OpenGLRenderer.h"
 
 #ifdef _DEBUG
@@ -30,9 +31,24 @@ CChildView::CChildView()
     CGrPtr<CGrComposite> scene = new CGrComposite;
     m_scene = scene;
 
+    // Procedural checkerboard texture used by a mapped floor
+    CGrPtr<CGrTexture> checker = new CGrTexture;
+    checker->SetSize(256, 256);
+    for (int y = 0; y < 256; y++)
+    {
+        for (int x = 0; x < 256; x++)
+        {
+            const bool dark = ((x / 32) + (y / 32)) % 2 == 0;
+            checker->Set(x, y, dark ? 30 : 220, dark ? 30 : 220, dark ? 30 : 220);
+        }
+    }
+
     // Red box
     CGrPtr<CGrMaterial> redpaint = new CGrMaterial;
     redpaint->AmbientAndDiffuse(0.8f, 0.0f, 0.0f);
+    redpaint->Specular(0.6f, 0.6f, 0.6f);
+    redpaint->SpecularOther(0.2f, 0.2f, 0.2f);
+    redpaint->Shininess(30.0f);
     scene->Child(redpaint);
 
     CGrPtr<CGrComposite> redbox = new CGrComposite;
@@ -42,11 +58,69 @@ CChildView::CChildView()
     // White box
     CGrPtr<CGrMaterial> whitepaint = new CGrMaterial;
     whitepaint->AmbientAndDiffuse(0.8f, 0.8f, 0.8f);
+    whitepaint->Specular(0.8f, 0.8f, 0.8f);
+    whitepaint->SpecularOther(0.55f, 0.55f, 0.55f);
+    whitepaint->Shininess(80.0f);
     scene->Child(whitepaint);
 
     CGrPtr<CGrComposite> whitebox = new CGrComposite;
     whitepaint->Child(whitebox);
     whitebox->Box(-10, -10, -10, 5, 5, 5);
+
+    // Textured floor (mapped rectangle rotated into XZ plane)
+    CGrPtr<CGrMaterial> floorpaint = new CGrMaterial;
+    floorpaint->Standard(CGrMaterial::texture);
+    floorpaint->Specular(0.2f, 0.2f, 0.2f);
+    floorpaint->Shininess(8.0f);
+    scene->Child(floorpaint);
+
+    CGrPtr<CGrTranslate> floortranslate = new CGrTranslate(0, -12, 0);
+    floorpaint->Child(floortranslate);
+
+    CGrPtr<CGrRotate> floorrotate = new CGrRotate(-90, 1, 0, 0);
+    floortranslate->Child(floorrotate);
+
+    CGrPtr<CGrComposite> floorgeo = new CGrComposite;
+    floorrotate->Child(floorgeo);
+    floorgeo->AddMappedRect(checker, -30, -30, 30, 30, 6, 6, 0, 0);
+
+    // Additional non-box shape: pyramid
+    CGrPtr<CGrMaterial> pyramidpaint = new CGrMaterial;
+    pyramidpaint->AmbientAndDiffuse(0.2f, 0.8f, 0.3f);
+    pyramidpaint->Specular(0.5f, 0.5f, 0.5f);
+    pyramidpaint->Shininess(24.0f);
+    scene->Child(pyramidpaint);
+
+    CGrPtr<CGrComposite> pyramid = new CGrComposite;
+    pyramidpaint->Child(pyramid);
+    CGrPoint p0(-18, -12, -5);
+    CGrPoint p1(-12, -12, -5);
+    CGrPoint p2(-12, -12, 1);
+    CGrPoint p3(-18, -12, 1);
+    CGrPoint apex(-15, -5, -2);
+    pyramid->Poly4(p0, p3, p2, p1);
+    pyramid->Poly3(p0, p1, apex);
+    pyramid->Poly3(p1, p2, apex);
+    pyramid->Poly3(p2, p3, apex);
+    pyramid->Poly3(p3, p0, apex);
+
+    // Additional non-box shape: tetrahedron
+    CGrPtr<CGrMaterial> tetpaint = new CGrMaterial;
+    tetpaint->AmbientAndDiffuse(0.2f, 0.4f, 0.9f);
+    tetpaint->Specular(0.6f, 0.6f, 0.6f);
+    tetpaint->Shininess(40.0f);
+    scene->Child(tetpaint);
+
+    CGrPtr<CGrComposite> tetra = new CGrComposite;
+    tetpaint->Child(tetra);
+    CGrPoint t0(10, -12, -14);
+    CGrPoint t1(16, -12, -14);
+    CGrPoint t2(13, -12, -8);
+    CGrPoint t3(13, -5, -11);
+    tetra->Poly3(t0, t2, t1);
+    tetra->Poly3(t0, t1, t3);
+    tetra->Poly3(t1, t2, t3);
+    tetra->Poly3(t2, t0, t3);
 }
 
 CChildView::~CChildView()
@@ -139,13 +213,19 @@ void CChildView::ConfigureRenderer(CGrRenderer* p_renderer)
         m_camera.Center()[0], m_camera.Center()[1], m_camera.Center()[2],
         m_camera.Up()[0], m_camera.Up()[1], m_camera.Up()[2]);
 
-    float dimd = 0.5f;
-    GLfloat dim[] = { dimd, dimd, dimd, 1.0f };
+    GLfloat lowambient[] = { 0.15f, 0.15f, 0.15f, 1.0f };
+    GLfloat softwhite[] = { 0.8f, 0.8f, 0.8f, 1.0f };
     GLfloat brightwhite[] = { 1.f, 1.f, 1.f, 1.0f };
 
     p_renderer->AddLight(
         CGrPoint(1, 0.5, 1.2, 0),
-        dim,
+        lowambient,
+        softwhite,
+        softwhite);
+
+    p_renderer->AddLight(
+        CGrPoint(20, 18, 25, 1),
+        lowambient,
         brightwhite,
         brightwhite);
 }

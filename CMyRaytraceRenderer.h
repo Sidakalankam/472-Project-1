@@ -1,6 +1,7 @@
 #pragma once
 
 #include <list>
+#include <vector>
 #include "graphics/GrRenderer.h"
 #include "graphics/GrTransform.h"
 #include "graphics/RayIntersection.h"
@@ -17,6 +18,7 @@ public:
     virtual void RendererPopMatrix();
     virtual void RendererRotate(double angle, double x, double y, double z);
     virtual void RendererTranslate(double x, double y, double z);
+    virtual void RendererTransform(const CGrTransform* p_transform);
 
     // Set image buffer
     void SetImage(BYTE** image, int width, int height);
@@ -33,4 +35,17 @@ private:
     CRayIntersection m_intersection;
     std::list<CGrTransform> m_mstack;
     CGrMaterial* m_material;
+    std::vector<CGrRenderer::Light> m_lights;
+    int m_maxdepth;
+
+    CGrPoint TraceRay(const CRay& ray, const CRayIntersection::Object* ignore, int depth);
+    CGrPoint Shade(const CRay& ray,
+                   const CRayIntersection::Object* nearest,
+                   const CGrPoint& point,
+                   const CGrPoint& normal,
+                   CGrMaterial* material,
+                   CGrTexture* texture,
+                   const CGrPoint& texcoord,
+                   int depth);
+    CGrPoint TextureColor(CGrTexture* texture, const CGrPoint& texcoord) const;
 };
