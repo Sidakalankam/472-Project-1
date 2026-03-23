@@ -2,13 +2,6 @@
 #include <cmath>
 #include "CMyRaytraceRenderer.h"
 
-static BYTE ClampColor(double c)
-{
-    if (c < 0.0) return 0;
-    if (c > 255.0) return 255;
-    return BYTE(c + 0.5);
-}
-
 CMyRaytraceRenderer::CMyRaytraceRenderer()
 {
     m_rayimage = NULL;
@@ -58,38 +51,25 @@ bool CMyRaytraceRenderer::RendererEnd()
             const double x = xmin + (double(c) + 0.5) / double(m_rayimagewidth) * xwid;
             const double y = ymin + (double(r) + 0.5) / double(m_rayimageheight) * ywid;
 
-            CRay ray(CGrPoint(0, 0, 0), CGrPoint(x, y, -1, 0));
+            // Construct a Ray
+            CRay ray(CGrPoint(0, 0, 0), Normalize3(CGrPoint(x, y, -1, 0)));
 
-            const CRayIntersection::Object* object = NULL;
-            double t = 0;
-            CGrPoint intersect;
-
-            if (m_intersection.Intersect(ray, FarClip(), NULL, object, t, intersect))
+            double t;                                   // Will be distance to intersection
+            CGrPoint intersect;                         // Will by x,y,z location of intersection
+            const CRayIntersection::Object* nearest;    // Pointer to intersecting object
+            if (m_intersection.Intersect(ray, 1e20, NULL, nearest, t, intersect))
             {
-                CGrPoint normal;
-                CGrMaterial* material = NULL;
-                CGrTexture* texture = NULL;
-                CGrPoint texcoord;
-                m_intersection.IntersectInfo(ray, object, t, normal, material, texture, texcoord);
-
-                if (material)
-                {
-                    m_rayimage[r][c * 3 + 0] = ClampColor(material->Diffuse(0) * 255.0);
-                    m_rayimage[r][c * 3 + 1] = ClampColor(material->Diffuse(1) * 255.0);
-                    m_rayimage[r][c * 3 + 2] = ClampColor(material->Diffuse(2) * 255.0);
-                }
-                else
-                {
-                    m_rayimage[r][c * 3 + 0] = 255;
-                    m_rayimage[r][c * 3 + 1] = 255;
-                    m_rayimage[r][c * 3 + 2] = 255;
-                }
+                // We hit something...
+                m_rayimage[r][c * 3 + 0] = BYTE(255);
+                m_rayimage[r][c * 3 + 1] = BYTE(255);
+                m_rayimage[r][c * 3 + 2] = BYTE(255);
             }
             else
             {
+                // We hit nothing...
                 m_rayimage[r][c * 3 + 0] = 0;
                 m_rayimage[r][c * 3 + 1] = 0;
-                m_rayimage[r][c * 3 + 2] = 255;
+                m_rayimage[r][c * 3 + 2] = 0;
             }
         }
     }
