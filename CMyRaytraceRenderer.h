@@ -10,6 +10,7 @@ class CMyRaytraceRenderer : public CGrRenderer
 public:
     CMyRaytraceRenderer();
     virtual bool RendererStart();
+    virtual bool RendererEnd();
     virtual void RendererEndPolygon();
     virtual void RendererMaterial(CGrMaterial* p_material);
     virtual void RendererPushMatrix();
