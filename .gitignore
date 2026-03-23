@@ -1,0 +1,17 @@
+# Visual Studio user-specific files
+*.user
+*.suo
+
+# Visual Studio intermediate/build output
+*.aps
+[Bb]in/
+[Oo]bj/
+[Xx]64/
+[Xx]86/
+Debug/
+Release/
+
+# VC database/cache
+*.VC.db
+*.VC.opendb
+*.ipch
