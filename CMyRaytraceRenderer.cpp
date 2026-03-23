@@ -31,6 +31,11 @@ static CGrPoint ReflectDir(const CGrPoint& d, const CGrPoint& n)
     return Normalize3(d - n * (2.0 * Dot3(d, n)));
 }
 
+static CGrPoint FogColor()
+{
+    return CGrPoint(0.62, 0.68, 0.78, 0);
+}
+
 CMyRaytraceRenderer::CMyRaytraceRenderer()
 {
     m_rayimage = NULL;
@@ -96,11 +101,21 @@ bool CMyRaytraceRenderer::RendererEnd()
     {
         for (int c = 0; c < m_rayimagewidth; c++)
         {
-            const double x = xmin + (double(c) + 0.5) / double(m_rayimagewidth) * xwid;
-            const double y = ymin + (double(r) + 0.5) / double(m_rayimageheight) * ywid;
+            // 2x2 supersampling antialiasing
+            static const double offsets[2] = { 0.25, 0.75 };
+            CGrPoint color(0, 0, 0, 0);
+            for (int sy = 0; sy < 2; sy++)
+            {
+                for (int sx = 0; sx < 2; sx++)
+                {
+                    const double x = xmin + (double(c) + offsets[sx]) / double(m_rayimagewidth) * xwid;
+                    const double y = ymin + (double(r) + offsets[sy]) / double(m_rayimageheight) * ywid;
 
-            CRay ray(CGrPoint(0, 0, 0), Normalize3(CGrPoint(x, y, -1, 0)));
-            CGrPoint color = TraceRay(ray, NULL, 0);
+                    CRay ray(CGrPoint(0, 0, 0), Normalize3(CGrPoint(x, y, -1, 0)));
+                    color += TraceRay(ray, NULL, 0);
+                }
+            }
+            color = color * 0.25;
 
             m_rayimage[r][c * 3 + 0] = ColorToByte(color.X());
             m_rayimage[r][c * 3 + 1] = ColorToByte(color.Y());
@@ -243,6 +258,13 @@ CGrPoint CMyRaytraceRenderer::Shade(const CRay& ray,
         CGrPoint rcolor = TraceRay(rray, nearest, depth + 1);
         color = color * (1.0 - reflectivity) + rcolor * reflectivity;
     }
+
+    // Depth fog / smoke effect.
+    const double fogstart = 45.0;
+    const double fogend = 140.0;
+    const double dist = point.Length3();
+    const double fog = ClampUnit((dist - fogstart) / (fogend - fogstart));
+    color = color * (1.0 - fog) + FogColor() * fog;
 
     return CGrPoint(ClampUnit(color.X()), ClampUnit(color.Y()), ClampUnit(color.Z()), 0);
 }
