@@ -2,6 +2,19 @@
 #include <cmath>
 #include "CMyRaytraceRenderer.h"
 
+static BYTE ClampToByte(double v)
+{
+    if (v < 0.0)
+    {
+        return 0;
+    }
+    if (v > 255.0)
+    {
+        return 255;
+    }
+    return BYTE(v);
+}
+
 CMyRaytraceRenderer::CMyRaytraceRenderer()
 {
     m_rayimage = NULL;
@@ -60,9 +73,27 @@ bool CMyRaytraceRenderer::RendererEnd()
             if (m_intersection.Intersect(ray, 1e20, NULL, nearest, t, intersect))
             {
                 // We hit something...
-                m_rayimage[r][c * 3 + 0] = BYTE(255);
-                m_rayimage[r][c * 3 + 1] = BYTE(255);
-                m_rayimage[r][c * 3 + 2] = BYTE(255);
+                // Determine information about the intersection
+                CGrPoint N;
+                CGrMaterial *material;
+                CGrTexture *texture;
+                CGrPoint texcoord;
+
+                m_intersection.IntersectInfo(ray, nearest, t,
+                                             N, material, texture, texcoord);
+
+                if (material != NULL)
+                {
+                    m_rayimage[r][c * 3 + 0] = ClampToByte(material->Diffuse(0) * 255.0);
+                    m_rayimage[r][c * 3 + 1] = ClampToByte(material->Diffuse(1) * 255.0);
+                    m_rayimage[r][c * 3 + 2] = ClampToByte(material->Diffuse(2) * 255.0);
+                }
+                else
+                {
+                    m_rayimage[r][c * 3 + 0] = BYTE(255);
+                    m_rayimage[r][c * 3 + 1] = BYTE(255);
+                    m_rayimage[r][c * 3 + 2] = BYTE(255);
+                }
             }
             else
             {
